@@ -1,0 +1,24 @@
+services:
+  icecast:
+    build: ./icecast
+    ports: ["8000:8000"]
+    environment:
+      SOURCE_PASSWORD: ${SOURCE_PASSWORD:-changeme-source}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme-admin}
+      ICECAST_HOSTNAME: ${ICECAST_HOSTNAME:-localhost}
+    restart: unless-stopped
+
+  ingest:
+    build: ./ingest
+    ports: ["${INGEST_PORT:-8090}:8080"]
+    depends_on: [icecast]
+    environment:
+      CHANNELS: ${CHANNELS:-main,news,music}
+      ICECAST_URL: icecast://source:${SOURCE_PASSWORD:-changeme-source}@icecast:8000
+      ICECAST_PUBLIC_URL: ${ICECAST_PUBLIC_URL:-http://localhost:8000}
+      BROADCAST_TOKEN: ${BROADCAST_TOKEN:-}
+    volumes: [hls:/hls]
+    restart: unless-stopped
+
+volumes:
+  hls:

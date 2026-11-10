@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Broadcast</title>
+<style>
+  body{font:16px system-ui,sans-serif;max-width:520px;margin:40px auto;padding:0 16px;color:#222}
+  select,input,button{font:inherit;padding:8px 12px}
+  button{min-width:140px;cursor:pointer}
+  .live{color:#c00;font-weight:600}
+  meter{width:100%;height:20px}
+  label{display:block;margin:12px 0}
+</style>
+<h1>🎙️ Broadcast</h1>
+<label>Channel <select id="ch"></select></label>
+<label>Token <input id="token" placeholder="(if server requires one)"></label>
+<p><button id="btn">Go live</button> <span id="status">offline</span></p>
+<meter id="level" max="1"></meter>
+<p><a href="/">← listener page</a></p>
+<script>
+const $ = (id) => document.getElementById(id);
+let ws, rec, stream, ctx, raf;
+
+fetch('/api/channels').then(r => r.json()).then(list => {
+  const want = new URLSearchParams(location.search).get('ch');
+  $('ch').innerHTML = list.map(c => `<option ${c.name === want ? 'selected' : ''}>${c.name}</option>`).join('');
+});
+
+$('btn').onclick = async () => {
+  if (ws) return stop();
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+
+  // level meter
+  ctx = new AudioContext();
+  const an = ctx.createAnalyser(); an.fftSize = 512;
+  ctx.createMediaStreamSource(stream).connect(an);
+  const buf = new Float32Array(an.fftSize);
+  (function tick() { an.getFloatTimeDomainData(buf); $('level').value = Math.max(...buf.map(Math.abs)); raf = requestAnimationFrame(tick); })();
+
+  const qs = new URLSearchParams({ ch: $('ch').value, token: $('token').value });
+  ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ingest?${qs}`);
+  ws.binaryType = 'arraybuffer';
+  ws.onopen = () => {
+    // shortcut: webm/opus only (Chrome, Firefox, Edge, recent Safari)
+    rec = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 48000 });
+    rec.ondataavailable = (e) => e.data.size && ws && ws.readyState === 1 && ws.send(e.data);
+    rec.start(100); // 100 ms chunks
+    $('status').innerHTML = '<span class="live">● LIVE</span>';
+    $('btn').textContent = 'Stop';
+  };
+  ws.onclose = (e) => { $('status').textContent = e.reason || 'offline'; stop(); };
+};
+
+function stop() {
+  const w = ws; ws = null;
+  rec && rec.state !== 'inactive' && rec.stop();
+  w && w.readyState <= 1 && w.close();
+  stream && stream.getTracks().forEach(t => t.stop());
+  ctx && ctx.close(); ctx = null;
+  cancelAnimationFrame(raf);
+  $('btn').textContent = 'Go live'; $('level').value = 0;
+}
+</script>
+</html>

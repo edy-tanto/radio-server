@@ -1,0 +1,38 @@
+<icecast>
+  <location>Indonesia</location>
+  <admin>admin@localhost</admin>
+  <hostname>@HOSTNAME@</hostname>
+  <limits>
+    <clients>2000</clients>
+    <sources>32</sources>
+    <queue-size>524288</queue-size>
+    <client-timeout>30</client-timeout>
+    <header-timeout>15</header-timeout>
+    <source-timeout>10</source-timeout>
+    <burst-on-connect>1</burst-on-connect>
+    <burst-size>65535</burst-size>
+  </limits>
+  <authentication>
+    <source-password>@SOURCE_PASSWORD@</source-password>
+    <relay-password>@SOURCE_PASSWORD@</relay-password>
+    <admin-user>admin</admin-user>
+    <admin-password>@ADMIN_PASSWORD@</admin-password>
+  </authentication>
+  <listen-socket><port>8000</port></listen-socket>
+  <http-headers>
+    <header name="Access-Control-Allow-Origin" value="*" />
+  </http-headers>
+  <fileserve>1</fileserve>
+  <paths>
+    <basedir>/usr/share/icecast</basedir>
+    <logdir>/var/log/icecast</logdir>
+    <webroot>/usr/share/icecast/web</webroot>
+    <adminroot>/usr/share/icecast/admin</adminroot>
+  </paths>
+  <logging>
+    <accesslog>access.log</accesslog>
+    <errorlog>error.log</errorlog>
+    <loglevel>2</loglevel>
+  </logging>
+  <security><chroot>0</chroot></security>
+</icecast>
